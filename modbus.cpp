@@ -1,20 +1,25 @@
-#include <includes/modbus.h>
-#include <exception>
+#include "includes/modbus.h"
+#include <stdexcept>
+#include <cstdlib>
+#include <cstring>
 
 using namespace std;
 
 
-ModBusConnector::ModBusConnector(string & ip, int & port)
+ModBusConnector::ModBusConnector(const string & ip, const int & port)
 {
 	this->ctx = modbus_new_tcp(ip.c_str(), port);
 	
 	if (ctx == NULL) {
     	cerr << "Unable to allocate libmodbus context" << endl;
+    	throw runtime_error("Unable to allocate libmodbus context");
 	}
 
 	if (modbus_connect(ctx) == -1) {
     	cerr << "Connection failed: " << modbus_strerror(errno) << endl;
     	modbus_free(ctx);
+    	this->ctx = NULL;
+    	throw runtime_error("Connection failed. ");
 	}
 }
 
@@ -25,7 +30,16 @@ ModBusConnector::~ModBusConnector()
 		modbus_close(this->ctx);
 	}
 	
-	modbus_free(this->ctx);
+	if (this->ctx != NULL)
+	{
+		modbus_free(this->ctx);	
+	}
+	
+}
+
+int ModBusConnector::isConnected()
+{
+	return modbus_connect(ctx);
 }
 
 void ModBusConnector::disconnect()
@@ -73,15 +87,15 @@ int ModBusConnector::read_input_bits(const int & addr, const int & num_of_bits, 
 	return rc;
 }
 
-int ModBusConnector::read_registers(const int & addr, const int & num_of_bits, vector<uint16_t> & values)
+int ModBusConnector::read_registers(const int & addr, const int & num_of_registers, vector<uint16_t> & values)
 {
-	uint16_t* tmp_values = (uint16_t *) malloc(num_of_bits * sizeof(uint16_t));
-	memset(tmp_values, 0, num_of_bits * sizeof(uint16_t));	
-	int rc = modbus_read_registers(this->ctx, addr, num_of_bits, tmp_values);
+	uint16_t* tmp_values = (uint16_t *) malloc(num_of_registers * sizeof(uint16_t));
+	memset(tmp_values, 0, num_of_registers * sizeof(uint16_t));	
+	int rc = modbus_read_registers(this->ctx, addr, num_of_registers, tmp_values);
 	
 	if (rc == 1)
 	{
-		values = vector<uint16_t>(tmp_values,tmp_values+num_of_bits);
+		values = vector<uint16_t>(tmp_values,tmp_values+num_of_registers);
 	}
 	
 	free(tmp_values);
@@ -89,20 +103,25 @@ int ModBusConnector::read_registers(const int & addr, const int & num_of_bits, v
 	return rc;
 }
 
-int ModBusConnector::read_input_read_registers(const int & addr, const int & num_of_bits, vector<uint16_t> & values)
+int ModBusConnector::read_input_registers(const int & addr, const int & num_of_registers, vector<uint16_t> & values)
 {
-	uint16_t* tmp_values = (uint16_t *) malloc(num_of_bits * sizeof(uint16_t));
-	memset(tmp_values, 0, num_of_bits * sizeof(uint16_t));	
-	int rc = modbus_read_input_read_registers(this->ctx, addr, num_of_bits, tmp_values);
+	uint16_t* tmp_values = (uint16_t *) malloc(num_of_registers * sizeof(uint16_t));
+	memset(tmp_values, 0, num_of_registers * sizeof(uint16_t));	
+	int rc = modbus_read_input_registers(this->ctx, addr, num_of_registers, tmp_values);
 	
 	if (rc == 1)
 	{
-		values = vector<uint16_t>(tmp_values,tmp_values+num_of_bits);
+		values = vector<uint16_t>(tmp_values,tmp_values+num_of_registers);
 	}
 	
 	free(tmp_values);
 	
 	return rc;
+}
+
+int ModBusConnector::write_bit(const int & addr, const uint8_t& value)
+{
+	return modbus_write_bit(this->ctx, addr, value);
 }
 
 int ModBusConnector::write_bits(const int & addr, const int & num_of_bits, const vector<uint8_t> & values)
@@ -111,13 +130,20 @@ int ModBusConnector::write_bits(const int & addr, const int & num_of_bits, const
 	
 	if ( num > num_of_bits)
 	{
-		int num = num_of_bits;
+		num = num_of_bits;
 	}
 	
-	uint8_t* tmp_values = values.data();	
+	uint8_t const* tmp_values = values.data();
+	
+	cout<<"write bits: "<< values[0]<<endl;
 	
 	return modbus_write_bits(this->ctx, addr, num, tmp_values);
 	
+}
+
+int ModBusConnector::write_register(const int & addr, const uint16_t& value)
+{
+	return modbus_write_register(this->ctx, addr, value);
 }
 
 int ModBusConnector::write_registers(const int & addr, const int & num_of_registers, 
@@ -127,10 +153,10 @@ int ModBusConnector::write_registers(const int & addr, const int & num_of_regist
 	
 	if ( num > num_of_registers)
 	{
-		int num = num_of_registers;
+		num = num_of_registers;
 	}
 	
-	uint16_t* tmp_values = values.data();	
+	uint16_t const* tmp_values = values.data();	
 	
 	return modbus_write_registers(this->ctx, addr, num, tmp_values);
 	
@@ -141,14 +167,14 @@ int ModBusConnector::write_and_read_registers(const int & write_addr, const int 
 									 		  const int & read_addr, const int & num_registers_to_read,
 									 		  vector<uint16_t> & values_to_read)
 {
-	num_to_write = values_to_write.size();
+	int num_to_write = values_to_write.size();
 
 	if ( num_to_write > num_of_registers_to_write)
 	{
-		int num_to_write = num_of_registers_to_write;
+		num_to_write = num_of_registers_to_write;
 	}
 	
-	uint16_t* tmp_values_to_write = values_to_write.data();
+	uint16_t const* tmp_values_to_write = values_to_write.data();
 	
 	uint16_t* tmp_values_to_read = (uint16_t *) malloc(num_registers_to_read * sizeof(uint16_t));
 	memset(tmp_values_to_read, 0, num_registers_to_read * sizeof(uint16_t));
@@ -157,7 +183,7 @@ int ModBusConnector::write_and_read_registers(const int & write_addr, const int 
 										     read_addr, num_registers_to_read, tmp_values_to_read);
 	if (rc == 1)
 	{
-		values_to_read = vector<uint16_t>(tmp_values_to_read,tmp_values+tmp_values_to_read);
+		values_to_read = vector<uint16_t>(tmp_values_to_read,tmp_values_to_read+num_registers_to_read);
 	}
 	
 	free(tmp_values_to_read);
