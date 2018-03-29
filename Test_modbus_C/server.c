@@ -23,28 +23,30 @@ int main(void)
         modbus_free(ctx);
         return -1;
     }
+	
+	for(;;){
+    	s = modbus_tcp_listen(ctx, 1);
+    	modbus_tcp_accept(ctx, &s);
 
-    s = modbus_tcp_listen(ctx, 1);
-    modbus_tcp_accept(ctx, &s);
+    	for (;;) {
+        	uint8_t query[MODBUS_TCP_MAX_ADU_LENGTH];
+        	int rc;
 
-    for (;;) {
-        uint8_t query[MODBUS_TCP_MAX_ADU_LENGTH];
-        int rc;
+        	rc = modbus_receive(ctx, query);
+        	if (rc > 0) {
+            	/* rc is the query size */
+            	modbus_reply(ctx, query, rc, mb_mapping);
+        	} else if (rc == -1) {
+            	/* Connection closed by the client or error */
+            	break;
+        	}
+    	}
 
-        rc = modbus_receive(ctx, query);
-        if (rc > 0) {
-            /* rc is the query size */
-            modbus_reply(ctx, query, rc, mb_mapping);
-        } else if (rc == -1) {
-            /* Connection closed by the client or error */
-            break;
-        }
-    }
+    	printf("Quit the loop: %s\n", modbus_strerror(errno));
 
-    printf("Quit the loop: %s\n", modbus_strerror(errno));
-
-    if (s != -1) {
-        close(s);
+    	if (s != -1) {
+        	close(s);
+    	}
     }
     modbus_mapping_free(mb_mapping);
     modbus_close(ctx);
