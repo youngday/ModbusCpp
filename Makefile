@@ -1,8 +1,8 @@
 CC=g++
 CFLAGS= -O3 -Wall -std=c++11
 LIBS = -lmodbus
-SRCS = client.cpp server.cpp
-CLIOBJS = client.o modbus.o
+SRCS = client_demo.cpp server.cpp
+CLIOBJS = client_demo.o modbus.o
 SEROBJS = server.o
 #MAIN = test
 DEPS = 

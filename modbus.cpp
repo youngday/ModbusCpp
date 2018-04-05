@@ -8,12 +8,12 @@ ModBusConnector::ModBusConnector(const std::string & ip, const int & port)
 	this->ctx = modbus_new_tcp(ip.c_str(), port);
 	
 	if (ctx == NULL) {
-    	std::cerr << "Unable to allocate libmodbus context" << std::endl;
+    	std::cerr << "modbus.cpp: Unable to allocate libmodbus context" << std::endl;
     	throw std::runtime_error("Unable to allocate libmodbus context");
 	}
 
 	if (modbus_connect(ctx) == -1) {
-    	std::cerr << "Connection failed: " << modbus_strerror(errno) << std::endl;
+    	std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
     	modbus_free(ctx);
     	this->ctx = NULL;
     	throw std::runtime_error("Connection failed. ");
