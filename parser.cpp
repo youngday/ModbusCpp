@@ -1,13 +1,6 @@
-#include <unordered_map>
-#include <utility>
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <cstdlib>
-#include <locale>
+#include "includes/parser.h"
 
-void parse(const std::string& config_file, std::string& ip, int& port, 
+void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, int& port, 
 			std::unordered_map<std::string, std::pair<std::string, std::vector<int>>>& data_map)
 {
 	std::ifstream ifs(config_file);

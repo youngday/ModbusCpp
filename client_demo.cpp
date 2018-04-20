@@ -1,4 +1,4 @@
-#include "parser.cpp"
+#include "includes/parser.h"
 #include "includes/modbus.h"
 #include <iomanip>
 #include <vector>
@@ -20,7 +20,7 @@ int main(int argc, char ** argv)
 	std::string ip;
 	int port;
 	
-	parse("./demo.conf", ip, port, data_map);
+	ModbusConfigParser::parse("./demo.conf", ip, port, data_map);
 	
 	std::cout<<"ip: "<<ip<<" port: "<<port<<std::endl;
 	
@@ -139,8 +139,8 @@ void displayvar(const std::unordered_map<std::string, std::pair<std::string, std
 	for (auto& x: data_map)
 		
 		std::cout << "Type: "<<std::left <<std::setw(17)<< x.second.first 
-				  << " Name: "<< std::left <<std::setw(20) << x.first  << "\tStart Addr: " 
-				  << x.second.second[0] <<"\tNum of Value: " << x.second.second[1] << std::endl<<std::endl;
+				  << " Name: "<< std::left <<std::setw(15) << x.first  << "\tStart Addr: " 
+				  << x.second.second[0]+1 <<"\tNum of Value: " << x.second.second[1] << std::endl<<std::endl;
 }
 
 void oper_write(ModBusConnector & conn, std::stringstream& ss, const bool is_float,
