@@ -50,13 +50,14 @@ void parse(const std::string& config_file, std::string& ip, int& port,
 				//coils_addr[1]: number of values
 				ss>>name>>coils_addr[0]>>coils_addr[1];
 				
-				if (!ss)
+				if (!ss || coils_addr[0] < 1 || coils_addr[1] < 1)
 				{
 					std::cerr<<"The data parameters are not correct! "
 							 <<"FORMAT: coil NAME START_ADDR NUMBER_OF_VALUES"<<std::endl;
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
+				coils_addr[0]--;
 				std::vector<int> coils_params(coils_addr,coils_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("coil", coils_params);
 				data_map[name] = data_params;	
@@ -68,13 +69,14 @@ void parse(const std::string& config_file, std::string& ip, int& port,
 				//coils_addr[1]: number of values
 				ss>>name>>inputbits_addr[0]>>inputbits_addr[1];
 				
-				if (!ss)
+				if (!ss || inputbits_addr[0] < 1 || inputbits_addr[1] < 1)
 				{
 					std::cerr<<"The data parameters are not correct! "
 							 <<"FORMAT: inputbit NAME START_ADDR NUMBER_OF_VALUES"<<std::endl;
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
+				inputbits_addr[0]--;
 				std::vector<int> inputbits_params(inputbits_addr, inputbits_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("input_bit", inputbits_params);
 				data_map[name] = data_params;	
@@ -86,13 +88,14 @@ void parse(const std::string& config_file, std::string& ip, int& port,
 				//coils_addr[1]: number of values
 				ss>>name>>registers_addr[0]>>registers_addr[1];
 				
-				if (!ss)
+				if (!ss || registers_addr[0] < 1 || registers_addr[1] < 1)
 				{
 					std::cerr<<"The data parameters are not correct! "
 							 <<"FORMAT: register NAME START_ADDR NUMBER_OF_VALUES"<<std::endl;
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
+				registers_addr[0]--;
 				std::vector<int> registers_params(registers_addr,registers_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("holding_register", registers_params);
 				data_map[name] = data_params;	
@@ -104,13 +107,14 @@ void parse(const std::string& config_file, std::string& ip, int& port,
 				//inputregs_addr[1]: number of values
 				ss>>name>>inputregs_addr[0]>>inputregs_addr[1];
 				
-				if (!ss)
+				if (!ss || inputregs_addr[0] < 1 || inputregs_addr[1] < 1)
 				{
 					std::cerr<<"The data parameters are not correct! "
 							 <<"FORMAT: coil NAME START_ADDR NUMBER_OF_VALUES"<<std::endl;
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
+				inputregs_addr[0]--;
 				std::vector<int> inputregs_params(inputregs_addr,inputregs_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("input_register", inputregs_params);
 				data_map[name] = data_params;	

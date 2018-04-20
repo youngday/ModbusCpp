@@ -41,6 +41,9 @@ class ModBusConnector
 							 		 const int & read_addr, const int & num_registers_to_read,
 							 		 std::vector<std::uint16_t> & values_to_read);
 		
+		static void set_float(const float& f, std::uint16_t& register0, std::uint16_t & register1);
+		
+		static float get_float(const std::uint16_t& register0, const std::uint16_t & register1);
 		
 		int isConnected();
 							 
