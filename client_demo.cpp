@@ -38,11 +38,12 @@ int main(int argc, char ** argv)
 	
 	while(1)
 	{
-		
+		conn.disconnect();
 		std::cout<<std::endl<<"Please Type Command:"<<std::endl<<"command>";
 						
 		std::string input;
 		std::getline(std::cin,input);
+		conn.connect();
 		if (input.empty())
 		{
 			continue;
