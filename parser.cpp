@@ -3,28 +3,27 @@
 void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, int& port, 
 			std::unordered_map<std::string, std::pair<std::string, std::vector<int>>>& data_map)
 {
-	std::ifstream ifs(config_file);
+	std::ifstream ifs(config_file); //open config file
 	
 	if (ifs.is_open())
 	{
 		std::string line;
-		while (std::getline(ifs,line))
+		while (std::getline(ifs,line))  //read line
 		{
 			if (line.empty())
 			{
 				continue;
 			}
 			
-			std::stringstream ss(line);
+			std::stringstream ss(line); //read line into stream
 			std::string item,name;
 			
-			if (!(ss>>item) || !item.size() || item[0] == '#')
+			if (!(ss>>item) || !item.size() || item[0] == '#') //skip line begining with #
 			{
 				continue;
-			}		
+			}			
 			
-			
-			if (item == "connection_params")
+			if (item == "connection_params") //connection parameters, server ip and port
 			{
 				ss>>ip>>port;
 				if (!ss)
@@ -36,7 +35,7 @@ void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, 
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 			}
-			else if (item == "coil")
+			else if (item == "coil") //coil type
 			{
 				int coils_addr[2]; 
 				//coils_addr[0]: start address
@@ -50,16 +49,19 @@ void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, 
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
-				coils_addr[0]--;
+				coils_addr[0]--; //convert PLC address space mapping to true address space
+								 //e.g In PLC, address 1-999 -----> true address 0-998
+				
+				//put varable into map
 				std::vector<int> coils_params(coils_addr,coils_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("coil", coils_params);
 				data_map[name] = data_params;	
 			}
-			else if (item == "inputbit")
+			else if (item == "inputbit") //discrete input
 			{
 				int inputbits_addr[2]; 
-				//coils_addr[0]: start address
-				//coils_addr[1]: number of values
+				//inputbits_addr[0]: start address
+				//inputbits_addr[1]: number of values
 				ss>>name>>inputbits_addr[0]>>inputbits_addr[1];
 				
 				if (!ss || inputbits_addr[0] < 1 || inputbits_addr[1] < 1)
@@ -69,16 +71,19 @@ void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, 
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
-				inputbits_addr[0]--;
+				inputbits_addr[0]--; //convert PLC address space mapping to true address space
+								 	 //e.g In PLC, address 1-999 -----> true address 0-998
+								 	 
+				//put varable into map
 				std::vector<int> inputbits_params(inputbits_addr, inputbits_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("input_bit", inputbits_params);
 				data_map[name] = data_params;	
 			}
-			else if (item == "register")
+			else if (item == "register") //holding register
 			{
 				int registers_addr[2]; 
-				//coils_addr[0]: start address
-				//coils_addr[1]: number of values
+				//registers_addr[0]: start address
+				//registers_addr[1]: number of values
 				ss>>name>>registers_addr[0]>>registers_addr[1];
 				
 				if (!ss || registers_addr[0] < 1 || registers_addr[1] < 1)
@@ -88,12 +93,15 @@ void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, 
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
-				registers_addr[0]--;
+				registers_addr[0]--; //convert PLC address space mapping to true address space
+								 	 //e.g In PLC, address 1-999 -----> true address 0-998
+				
+				//put varable into map
 				std::vector<int> registers_params(registers_addr,registers_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("holding_register", registers_params);
 				data_map[name] = data_params;	
 			}
-			else if (item == "inputreg")
+			else if (item == "inputreg") //input registers
 			{
 				int inputregs_addr[2]; 
 				//inputregs_addr[0]: start address
@@ -107,7 +115,10 @@ void ModbusConfigParser::parse(const std::string& config_file, std::string& ip, 
 					throw std::runtime_error("Configuration file parsing failed. " + line);
 				}
 				
-				inputregs_addr[0]--;
+				inputregs_addr[0]--; //convert PLC address space mapping to true address space
+								 	 //e.g In PLC, address 1-999 -----> true address 0-998
+				
+				//put varable into map
 				std::vector<int> inputregs_params(inputregs_addr,inputregs_addr+2);
 				std::pair<std::string,std::vector<int>> data_params("input_register", inputregs_params);
 				data_map[name] = data_params;	
