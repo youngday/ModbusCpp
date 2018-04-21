@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <locale>
+#include <exception>
 
 class ModbusConfigParser
 {

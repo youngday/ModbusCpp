@@ -25,7 +25,7 @@ int main(void)
     }
 	
 	for(;;){
-    	s = modbus_tcp_listen(ctx, 1);
+    	s = modbus_tcp_listen(ctx, 2);
     	modbus_tcp_accept(ctx, &s);
 
     	for (;;) {

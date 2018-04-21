@@ -1,49 +1,60 @@
 #include "includes/modbus.h"
-#include <stdexcept>
 #include <cstdlib>
 #include <cstring>
+
 
 ModBusConnector::ModBusConnector(const std::string & ip, const int & port)
 {
 	this->ctx = modbus_new_tcp(ip.c_str(), port);
 	
-	if (ctx == NULL) {
+	if (this->ctx == NULL) {
     	std::cerr << "modbus.cpp: Unable to allocate libmodbus context" << std::endl;
     	throw std::runtime_error("Unable to allocate libmodbus context");
 	}
 
-	if (modbus_connect(ctx) == -1) {
+	if (modbus_connect(this->ctx) == -1) {
     	std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
     	modbus_free(ctx);
     	this->ctx = NULL;
     	throw std::runtime_error("Connection failed. ");
 	}
+	
+	this->is_connected = true;
 }
 
 ModBusConnector::~ModBusConnector()
 {
-	if (modbus_connect(ctx) != -1)
+	if (this->is_connected)
 	{
 		modbus_close(this->ctx);
-	}
+		this->is_connected = false;
+	}	
 	
 	if (this->ctx != NULL)
 	{
-		modbus_free(this->ctx);	
+		modbus_free(this->ctx);
+		this->ctx = NULL;
 	}
 	
 }
 
-int ModBusConnector::isConnected()
+int ModBusConnector::connect()
 {
-	return modbus_connect(ctx);
+	int rc = modbus_connect(this->ctx);
+	if (rc == -1) 
+	{
+		std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
+	}
+	else this->is_connected = true;
+	return rc;
 }
 
 void ModBusConnector::disconnect()
 {
-	if (modbus_connect(ctx) != -1)
+	if (this->is_connected)
 	{
 		modbus_close(this->ctx);
+		this->is_connected = false;
 	}
 }
 
