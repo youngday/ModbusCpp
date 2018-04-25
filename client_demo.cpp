@@ -178,7 +178,7 @@ void oper_write(ModBusConnector & conn, std::stringstream& ss, const bool is_flo
 				for (int i=0; i<num-1; i += 2) {	
 					value = (float) ((double) rand() / ((double)RAND_MAX/65535.0));
                		ModBusConnector::set_float(value, tab_rq_registers[i], tab_rq_registers[i+1]);
-               		std::cout<<value<<"\t";
+               		std::cout<<std::setprecision(7)<<value<<"\t";
             	}
 			}
 			else
@@ -285,7 +285,7 @@ void oper_read(ModBusConnector & conn, std::stringstream & ss, const bool is_flo
 					for (int i = 0; i < num-1; i += 2)
 					{
 						value = ModBusConnector::get_float(tab_rp_registers[i], tab_rp_registers[i+1]);
-						std::cout<<value<<"\t";
+						std::cout<<std::setprecision(7)<<value<<"\t";
 					}
 				}
 				else
@@ -388,7 +388,7 @@ void oper_read_write(ModBusConnector & conn, std::stringstream& ss, const bool i
 			for (int i=0; i<num-1; i += 2) {
 				value = (float) ((double) rand() / ((double)RAND_MAX/65535.0));
             	ModBusConnector::set_float(value, tab_rw_rq_registers[i], tab_rw_rq_registers[i+1]);
-            	std::cout<<value<<"\t";
+            	std::cout<<std::setprecision(7)<<value<<"\t";
         	}
 		}
 		else
@@ -412,7 +412,7 @@ void oper_read_write(ModBusConnector & conn, std::stringstream& ss, const bool i
             	for (int i = 0; i < num-1; i += 2)
             	{
             		value_read = ModBusConnector::get_float(tab_rp_registers[i],tab_rp_registers[i+1]);
-            		std::cout<<value_read<<"\t";
+            		std::cout<<std::setprecision(7)<<value_read<<"\t";
             	}
             }
             else
