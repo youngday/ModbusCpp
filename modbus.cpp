@@ -12,14 +12,6 @@ ModBusConnector::ModBusConnector(const std::string & ip, const int & port)
     	throw std::runtime_error("Unable to allocate libmodbus context");
 	}
 
-	if (modbus_connect(this->ctx) == -1) {
-    	std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
-    	modbus_free(ctx);
-    	this->ctx = NULL;
-    	throw std::runtime_error("Connection failed. ");
-	}
-	
-	this->is_connected = true;
 }
 
 ModBusConnector::~ModBusConnector()
@@ -38,15 +30,16 @@ ModBusConnector::~ModBusConnector()
 	
 }
 
-int ModBusConnector::connect()
+void ModBusConnector::connect()
 {
-	int rc = modbus_connect(this->ctx);
-	if (rc == -1) 
-	{
-		std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
+	if (modbus_connect(this->ctx) == -1) {
+    	std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
+    	modbus_free(ctx);
+    	this->ctx = NULL;    	
+    	throw std::runtime_error("Connection failed: " + std::string(modbus_strerror(errno)));
 	}
-	else this->is_connected = true;
-	return rc;
+	
+	this->is_connected = true;
 }
 
 void ModBusConnector::disconnect()

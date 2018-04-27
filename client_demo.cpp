@@ -22,11 +22,11 @@ int main(int argc, char ** argv)
 	
 	ModbusConfigParser::parse("./demo.conf", ip, port, data_map);
 	
-	std::cout<<"ip: "<<ip<<" port: "<<port<<std::endl;
+	std::cout<<"Connection to be established"<<std::endl;
+	
+	std::cout<<"ip: "<<ip<<" port: "<<port<<std::endl<<std::endl;
 	
 	ModBusConnector conn = ModBusConnector(ip, port);
-	
-	std::cout<<"Connection has been established"<<std::endl<<std::endl;
 	
 	std::cout<<"Available Variables List: "<<std::endl;
 	
@@ -43,7 +43,7 @@ int main(int argc, char ** argv)
 						
 		std::string input;
 		std::getline(std::cin,input);
-		conn.connect();
+		
 		if (input.empty())
 		{
 			continue;
@@ -71,6 +71,19 @@ int main(int argc, char ** argv)
 			displayvar(data_map);
 			continue;
 		}
+		
+		try
+		{
+		
+			conn.connect();
+		
+		}
+		catch(std::exception & ex)
+		{
+			std::cout<<ex.what()<<std::endl;
+			continue;
+		}
+		
 		if (oper == "write")
 		{
 			oper_write(conn, ss, false, data_map);

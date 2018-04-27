@@ -58,10 +58,8 @@ class ModBusConnector
 		static float get_float(const std::uint16_t& register0, const std::uint16_t & register1);
 		//get a float type value from two holding registers
 		
-		int connect();
+		void connect();
 		//build a modbus connection
-		//Though the connection should be automatically connected
-		//when creating a ModBusConnector class intance
 							 
 		void disconnect();
 		// disconnect a modbus connection
