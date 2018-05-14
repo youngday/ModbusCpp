@@ -3,8 +3,10 @@
 #include <cstring>
 
 
+
 ModBusConnector::ModBusConnector(const std::string & ip, const int & port)
 {
+	modbus_lock = new std::mutex();
 	this->ctx = modbus_new_tcp(ip.c_str(), port);
 	//create modbux context
 	
@@ -12,7 +14,6 @@ ModBusConnector::ModBusConnector(const std::string & ip, const int & port)
     	std::cerr << "modbus.cpp: Unable to allocate libmodbus context" << std::endl;
     	throw std::runtime_error("Unable to allocate libmodbus context");
 	}
-
 }
 
 ModBusConnector::~ModBusConnector()
@@ -29,18 +30,20 @@ ModBusConnector::~ModBusConnector()
 		this->ctx = NULL;
 	}
 	
+	delete modbus_lock;
 }
 
 void ModBusConnector::connect() //build a modbus connection
 {
+	modbus_lock->lock();
 	if (modbus_connect(this->ctx) == -1) {   //libmodbus 
     	std::cerr << "modbus.cpp: Connection failed: " << modbus_strerror(errno) << std::endl;
-    	modbus_free(ctx);
-    	this->ctx = NULL;    	
+    	modbus_lock->unlock();	
     	throw std::runtime_error("Connection failed: " + std::string(modbus_strerror(errno)));
 	}
 	
 	this->is_connected = true;
+	modbus_lock->unlock();
 }
 
 // disconnect a modbus connection
@@ -48,16 +51,20 @@ void ModBusConnector::connect() //build a modbus connection
 // when the class instance is destructed
 void ModBusConnector::disconnect()
 {
+	modbus_lock->lock();
 	if (this->is_connected)
 	{
 		modbus_close(this->ctx); //libmodbus 
 		this->is_connected = false;
 	}
+	modbus_lock->unlock();
 }
 
 void ModBusConnector::set_debug(bool flag)  // enable modbus verbose message mode
 {
-	modbus_set_debug(ctx, flag); //libmodbus 
+	modbus_lock->lock();
+	modbus_set_debug(this->ctx, flag); //libmodbus
+	modbus_lock->unlock();
 }
 
 //read a number of coils
@@ -70,8 +77,11 @@ int ModBusConnector::read_bits(const int & addr, const int & num_of_bits, std::v
 		std::cerr << "modbus.cpp read_bits: Unable to allocate memory" << std::endl;
 		return -1;
 	}
-	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));	
+	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));
+	
+	modbus_lock->lock();
 	int rc = modbus_read_bits(this->ctx, addr, num_of_bits, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
 	if (rc == num_of_bits) //if successfully
 	{
@@ -94,8 +104,11 @@ int ModBusConnector::read_input_bits(const int & addr, const int & num_of_bits,
 		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
 		return -1;
 	}
-	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));	
+	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));
+	
+	modbus_lock->lock();
 	int rc = modbus_read_input_bits(this->ctx, addr, num_of_bits, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
 	if (rc == num_of_bits) //if successfully
 	{
@@ -118,8 +131,11 @@ int ModBusConnector::read_registers(const int & addr, const int & num_of_registe
 		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
 		return -1;
 	}
-	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));	
+	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));
+	
+	modbus_lock->lock();
 	int rc = modbus_read_registers(this->ctx, addr, num_of_registers, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
 	if (rc == num_of_registers) //if successfully
 	{
@@ -142,8 +158,11 @@ int ModBusConnector::read_input_registers(const int & addr, const int & num_of_r
 		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
 		return -1;
 	}
-	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));	
+	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));
+	
+	modbus_lock->lock();
 	int rc = modbus_read_input_registers(this->ctx, addr, num_of_registers, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
 	if (rc == num_of_registers)  //if successfully
 	{
@@ -157,8 +176,12 @@ int ModBusConnector::read_input_registers(const int & addr, const int & num_of_r
 
 //write value into a single coil
 int ModBusConnector::write_bit(const int & addr, const std::uint8_t& value)
-{
-	return modbus_write_bit(this->ctx, addr, value); //libmodbus
+{	
+	modbus_lock->lock();
+	int rc = modbus_write_bit(this->ctx, addr, value); //libmodbus
+	modbus_lock->unlock();
+	
+	return rc;
 }
 
 //write values into a number of coils
@@ -176,14 +199,21 @@ int ModBusConnector::write_bits(const int & addr, const int & num_of_bits,
 	
 	std::uint8_t const* tmp_values = values.data(); //convert to array
 	
-	return modbus_write_bits(this->ctx, addr, num, tmp_values); //libmodbus
+	modbus_lock->lock();
+	int rc = modbus_write_bits(this->ctx, addr, num, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
+	return rc;	
 }
 
 //write value into a single holding register
 int ModBusConnector::write_register(const int & addr, const std::uint16_t& value)
 {
-	return modbus_write_register(this->ctx, addr, value); //libmodbus
+	modbus_lock->lock();
+	int rc = modbus_write_register(this->ctx, addr, value); //libmodbus
+	modbus_lock->unlock();
+	
+	return rc;
 }
 
 //write values into a number of holding registers
@@ -201,8 +231,11 @@ int ModBusConnector::write_registers(const int & addr, const int & num_of_regist
 	
 	std::uint16_t const* tmp_values = values.data(); //convert to array
 	
-	return modbus_write_registers(this->ctx, addr, num, tmp_values); //libmodbus
+	modbus_lock->lock();
+	int rc = modbus_write_registers(this->ctx, addr, num, tmp_values); //libmodbus
+	modbus_lock->unlock();
 	
+	return rc;
 }
 
 //write values into a number of holding registers and then read values back from those registers
@@ -230,9 +263,12 @@ int ModBusConnector::write_and_read_registers(const int & write_addr, const int 
 	}
 	memset(tmp_values_to_read, 0, num_registers_to_read * sizeof(std::uint16_t));
 	
+	modbus_lock->lock();
 	//libmodbus
 	int rc = modbus_write_and_read_registers(this->ctx, write_addr, num_to_write, tmp_values_to_write,
 										     read_addr, num_registers_to_read, tmp_values_to_read);
+	modbus_lock->unlock();
+	
 	if (rc == num_registers_to_read) //if read successfully
 	{
 		values_to_read = 

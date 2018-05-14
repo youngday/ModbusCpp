@@ -6,6 +6,8 @@
 #include <vector>
 #include <cstdint>
 #include <exception>
+#include <stdexcept>
+#include <mutex>
 #include <modbus/modbus.h>
 
 
@@ -15,6 +17,7 @@ class ModBusConnector
 	
 		modbus_t * ctx;  //libmodbus context
 		bool is_connected;  //record connection state;
+		std::mutex * modbus_lock;	//mutex lock
 	
 	public:
 

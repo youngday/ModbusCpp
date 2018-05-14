@@ -38,6 +38,17 @@ int main(int argc, char ** argv)
 	
 	ModBusConnector conn = ModBusConnector(ip, port); //create modbus connection instance
 	
+	try
+	{
+		
+		conn.connect(); //connect to server
+		
+	}
+	catch(std::exception & ex)
+	{
+		std::cout<<ex.what()<<std::endl;
+	}
+	
 	std::cout<<"Available Variables List: "<<std::endl;
 	
 	displayvar(data_map); //display available varable mapping
@@ -238,7 +249,7 @@ void oper_write(ModBusConnector & conn, std::stringstream& ss, const bool is_flo
 				return;
 			}
 			std::cout<<"Writing random bits into the selected coils..."<<std::endl;
-			std::vector<uint8_t> tab_rq_bits(num,0); /coils vector
+			std::vector<uint8_t> tab_rq_bits(num,0); //coils vector
 			for (int i=0; i<num; i++) {
                	tab_rq_bits[i] = ((uint16_t) (65535.0*rand() / (RAND_MAX + 1.0))) % 2; //random bit
                 std::cout<<(int)tab_rq_bits[i]<<"\t";
