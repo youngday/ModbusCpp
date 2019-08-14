@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <exception>
 #include <stdexcept>
-#include <mutex>
 #include <modbus/modbus.h>
 
 
@@ -17,7 +16,6 @@ class ModBusConnector
 	
 		modbus_t * ctx;  //libmodbus context
 		bool is_connected;  //record connection state;
-		std::mutex * modbus_lock;	//mutex lock
 	
 	public:
 
@@ -59,6 +57,12 @@ class ModBusConnector
 		//convert a float type value to two holding registers
 		
 		static float get_float(const std::uint16_t& register0, const std::uint16_t & register1);
+		//get a float type value from two holding registers
+
+		static void set_float_swap(const float& f, std::uint16_t& register0, std::uint16_t & register1);
+		//convert a float type value to two holding registers
+		
+		static float get_float_swap(const std::uint16_t& register0, const std::uint16_t & register1);
 		//get a float type value from two holding registers
 		
 		void connect();
