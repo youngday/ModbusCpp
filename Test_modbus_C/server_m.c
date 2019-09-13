@@ -1,3 +1,5 @@
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -19,11 +21,13 @@
 #define NB_CONNECTION    5
 
 static modbus_t *ctx = NULL;
+// s
 static modbus_mapping_t *mb_mapping;
 
 static int server_socket = -1;
 
-static void close_sigint(int dummy)
+// function to cleanup when exit
+static void cleanup(int dummy)
 {
     if (server_socket != -1) {
         close(server_socket);
@@ -62,7 +66,7 @@ int main(void)
         return -1;
     }
 
-    signal(SIGINT, close_sigint);
+    signal(SIGINT, cleanup);
 
     /* Clear the reference set of socket */
     FD_ZERO(&refset);
@@ -76,7 +80,7 @@ int main(void)
         rdset = refset;
         if (select(fdmax+1, &rdset, NULL, NULL, NULL) == -1) {
             perror("Server select() failure.");
-            close_sigint(1);
+            cleanup(EXIT_FAILURE);
         }
 
         /* Run through the existing connections looking for data to be

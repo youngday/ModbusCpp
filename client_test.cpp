@@ -51,7 +51,7 @@ int main(void)
 */
 
     /* TCP */
-    ModBusConnector conn = ModBusConnector("192.168.0.106", 1502);
+    ModBusConnector conn("192.168.0.106", 1502);
     
     conn.set_debug(FALSE);
 
