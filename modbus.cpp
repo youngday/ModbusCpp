@@ -574,7 +574,7 @@ ModBusServer::ModBusServer(const std::string &ip, const int &port, const int &nb
 		close(this->epollfd);				   /* cleanup on failure */
 		modbus_mapping_free(this->mb_mapping); /* cleanup on failure */
 		modbus_free(this->ctx);				   /* cleanup on failure */
-		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate epoll event arrays: " + std::string(strerror(errno)));
+		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate epoll event arrays");
 	}
 
 	this->query = (uint8_t *)calloc(MODBUS_TCP_MAX_ADU_LENGTH, sizeof(uint8_t));
@@ -584,19 +584,63 @@ ModBusServer::ModBusServer(const std::string &ip, const int &port, const int &nb
 		close(this->epollfd);				   /* cleanup on failure */
 		modbus_mapping_free(this->mb_mapping); /* cleanup on failure */
 		modbus_free(this->ctx);				   /* cleanup on failure */
-		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate query: " + std::string(strerror(errno)));
+		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate query");
 	}
+
+	this->active_socket_set = new std::unordered_set<int>();
+	if (__glibc_unlikely(!this->active_socket_set))
+	{
+		free(this->query);					   /* cleanup on failure */
+		free(this->events);					   /* cleanup on failure */
+		close(this->epollfd);				   /* cleanup on failure */
+		modbus_mapping_free(this->mb_mapping); /* cleanup on failure */
+		modbus_free(this->ctx);				   /* cleanup on failure */
+		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate active_socket_set");
+	}
+
+	this->event_valid = (bool *)calloc(MAX_EPOLL_EVENTS, sizeof(bool));
+	if (__glibc_unlikely(!this->event_valid))
+	{
+		delete this->active_socket_set;		   /* cleanup on failure */
+		free(this->query);					   /* cleanup on failure */
+		free(this->events);					   /* cleanup on failure */
+		close(this->epollfd);				   /* cleanup on failure */
+		modbus_mapping_free(this->mb_mapping); /* cleanup on failure */
+		modbus_free(this->ctx);				   /* cleanup on failure */
+		throw std::runtime_error("[ModBusServer::ModBusServer]Failed to allocate event_valid arrays");
+	}
+	memset(this->event_valid, 0, MAX_EPOLL_EVENTS * sizeof(bool)); /* init each bit of event_valid is 0 */
 }
 
 // default destructor for Modbus server
 ModBusServer::~ModBusServer()
 {
+	free(event_valid);
+	/* close all remaining active sockets */
+	for (auto &sock : *active_socket_set)
+	{
+		/* removing active socket from epoll interest list */
+		if (__glibc_unlikely(epoll_ctl(this->epollfd, EPOLL_CTL_DEL, sock, NULL) == -1))
+		{
+			/* sanity check */
+			std::cerr << "[ModBusServer::process] removing socket " << sock
+					  << " from epoll interest list fails, "
+					  << strerror(errno) << std::endl;
+		}
+		if (__glibc_unlikely(close(sock) == -1)) /* close all active sockets */
+		{
+			/* sanity check, never happen if code is correct */
+			std::cerr << "[ModBusServer::process] closing socket fails when adding to epoll interest list fails, "
+					  << strerror(errno) << std::endl;
+		}
+	}
+	delete active_socket_set;
 	if (query)
 		free(query);
 	if (events)
 		free(events);
 	if (server_socket != -1)
-		close(server_socket);
+		close(server_socket); /* close main server socket */
 	if (epollfd != -1)
 		close(epollfd);
 	if (mb_mapping)
@@ -632,6 +676,7 @@ void ModBusServer::listen(const int &max_number_pending_connection)
 
 	if (__glibc_unlikely(!epoll_add(this->epollfd, this->server_socket)))
 	{
+		/* sanity check */
 		close(this->server_socket);				  /* cleanup on failure */
 		close(this->epollfd);					  /* cleanup on failure */
 		this->epollfd = this->server_socket = -1; /* reset to default on failure */
@@ -668,37 +713,38 @@ int ModBusServer::wait()
 		else
 			throw std::runtime_error("[ModBusServer::wait]Unable to wait for incoming connection: " + std::string(strerror(errno)));
 	}
+	for (std::size_t i = 0; i < MAX_EPOLL_EVENTS; ++i)
+		event_valid[i] = true;
+
 	return this->eventcount;
 }
 
-/** receive, process and reply the request from [index]th connection
- * \index: the index of the selected one of connections ready for ModBusServer::receive()
+/** receive, process and reply the request from the [index]th available connections
+ * \index: the index of the selected one of sockets ready for ModBusServer::receive()
  * \return: true if a new connection is established, false if request is processed on an existing connection
  * \throw: runtime_error when:
  *         1. \index exceeds the number of available connections returned by ModBusServer::wait()
- *         2. didn't call ModBusServer::wait() before ModBusServer::process();
  *         3. the selected connection with the \index is already closed
  *         4. Unable to accept a new connection
 */
 bool ModBusServer::process(const int &index)
 {
-	if (this->eventcount == -1)
-	{
-		throw std::runtime_error("[ModBusServer::process] ModBusServer::wait() was not called before ModBusServer::process ");
-	}
 	if (index >= this->eventcount) /* the conection is not ready */
 	{
-		this->eventcount = -1; /* reset to default after use, so next time we know whether ModBusServer::wait() is called */
 		throw std::runtime_error("[ModBusServer::process] index:" + std::to_string(index) + ", this connection is not ready");
 	}
-	this->eventcount = -1; /* reset to default after use, so next time we know whether ModBusServer::wait() is called */
+
+	if (!this->event_valid[index])
+	{
+		throw std::runtime_error("[ModBusServer::process] index:" + std::to_string(index) + ", this connection has already been processed by ModBusServer::process");
+	}
 
 	if (events[index].data.fd == -1) /* the event is not associated with a valid connection */
 	{
 		throw std::runtime_error("[ModBusServer::process] The connection(index:" + std::to_string(index) + ") was already closed");
 	}
 
-	if (events[index].data.fd == this->server_socket) /* A client is asking a new connection */
+	if (events[index].data.fd == this->server_socket) /* A client is asking for a new connection */
 	{
 		socklen_t addrlen; /* length of sockaddr_in struct */
 		struct sockaddr_in clientaddr;
@@ -715,19 +761,38 @@ bool ModBusServer::process(const int &index)
 		/* add the new connection to epoll interest list */
 		if (__glibc_unlikely(!epoll_add(this->epollfd, new_sock)))
 		{
-			close(new_sock);
+			auto tmp_error = errno;
+			if (__glibc_unlikely(close(new_sock) == -1)) /* sanity check, never happen if code is correct */
+			{
+				std::cerr << "[ModBusServer::process] closing socket fails when adding to epoll interest list fails, "
+						  << strerror(errno) << std::endl;
+				errno = tmp_error;
+			}
 			throw std::runtime_error("[ModBusServer::process]Unable to accept new incoming connection (epoll_ctl): " + std::string(strerror(errno)));
 		}
+		auto insert_result = active_socket_set->insert(new_sock);
+		if (__glibc_unlikely(!insert_result.second)) /* sanity check, never happen unless something is wrong */
+		{
+			/* insert fails due to duplicate key */
+			if (__glibc_unlikely(close(new_sock) == -1)) /* sanity check, never happen if code is correct */
+			{
+				std::cerr << "[ModBusServer::process] closing socket fails when duplicate socket number found, "
+						  << strerror(errno) << std::endl;
+			}
+			throw std::runtime_error("[ModBusServer::process]uplicate socket number found: " + std::to_string(new_sock));
+		}
+		this->event_valid[index] = false;
 		return true;
 	}
 	else
 	{
 		modbus_set_socket(ctx, events[index].data.fd);
 
-		/* call libmodbus to receive data */
+		/* call libmodbus to receive modbus query */
 		int rc = modbus_receive(ctx, query);
 		if (rc > 0)
 		{
+			/* call libmodbus to reply the query */
 			modbus_reply(ctx, query, rc, mb_mapping);
 		}
 		else if (rc == -1) /* connection failure or reset by peer */
@@ -736,14 +801,17 @@ bool ModBusServer::process(const int &index)
 			epoll_ctl(this->epollfd, EPOLL_CTL_DEL, events[index].data.fd, &events[index]);
 			/* close socket */
 			close(events[index].data.fd);
+			/* remove from active sockets set */
+			active_socket_set->erase(events[index].data.fd);
 			/* prevent user from trying to access a closed connection */
 			events[index].data.fd = -1;
 		}
 
-		if (__glibc_unlikely(!rc)) /* sanity check, not possible stated by the doc file of libmodbus*/
+		if (__glibc_unlikely(!rc)) /* sanity check, not possible as stated by the doc file of libmodbus*/
 		{
-			std::cerr << " ModBusServer::process: rc == 0!";
+			std::cerr << " ModBusServer::process: rc == 0!" << std::endl;
 		}
+		this->event_valid[index] = false;
 		return false;
 	}
 }

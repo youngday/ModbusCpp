@@ -10,6 +10,7 @@
 #include <mutex>
 #include <sys/epoll.h>
 #include <modbus/modbus.h>
+#include <unordered_set>
 
 class ModBusConnector
 {
@@ -21,9 +22,9 @@ private:
 public:
 	/* default constructor for Modbus connector */
 	ModBusConnector(const std::string &ip, const int &port);
-    /* Non-Copyable */
-	ModBusConnector(const ModBusConnector&) = delete;
-	ModBusConnector &operator=(const ModBusConnector&) = delete;
+	/* Non-Copyable */
+	ModBusConnector(const ModBusConnector &) = delete;
+	ModBusConnector &operator=(const ModBusConnector &) = delete;
 	/* Non-Movable */
 	ModBusConnector(ModBusConnector &&) = delete;
 	ModBusConnector &operator=(ModBusConnector &&) = delete;
@@ -97,19 +98,29 @@ public:
 class ModBusServer
 {
 private:
-	// modbus context
+	/* modbus context */
 	modbus_t *ctx = nullptr;
-	// modbus server data structure
+	/* modbus server data structure */
 	modbus_mapping_t *mb_mapping = nullptr;
-	// modbus server socket
-	int server_socket = -1;
-	// epoll file descriptor
+	/* epoll file descriptor */
 	int epollfd = -1;
-	// epoll event data structure
+	/* epoll event data structure */
 	struct epoll_event *events = nullptr;
-	// 
+	/* current received modbus query */
 	uint8_t *query = nullptr;
-	ssize_t eventcount = -1;
+	/* the set to hold the active sockets associated instance
+	   used to track open sockets in order to close on destruction*/
+	std::unordered_set<int> *active_socket_set = nullptr;
+	/* modbus server socket */
+	int server_socket = -1;
+	/* store the number of the epoll events returned by ModBusServer::wait()
+	   for error-proof purpose in ModBusServer::process() */
+	int eventcount = -1;
+	/* indicate the status of each epoll event in the epoll events array returned by ModBusServer::wait()
+	   for error-proof purpose in ModBusServer::process()
+	   true: the epoll event is ready for processing 
+	   false: the epoll event has already been processed */
+	bool *event_valid = nullptr;
 
 public:
 	/* default constructor for Modbus server */

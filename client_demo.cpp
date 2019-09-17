@@ -23,7 +23,7 @@ void oper_read_write(ModBusConnector &conn, std::stringstream &ss, const bool is
 
 int main()
 {
-	std::unordered_map<std::string, std::pair<std::string, std::vector<int>>> data_map;
+	static std::unordered_map<std::string, std::pair<std::string, std::vector<int>>> data_map;
 	//variable modbus mapping
 
 	std::string ip;
