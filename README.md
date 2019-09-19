@@ -1,7 +1,17 @@
 # ModbusCpp
 A Simple C++ Lib for ModBus
 
-## Use the simple modbus client and server
+## Use the simple modbus client and server demo
+
+### Prerequisite
+
+- Install libmodbus:
+
+  For Debian/Ubuntu
+   ```
+   $ sudo apt update
+   $ sudo apt install libmodbus-dev
+   ```
 
 ### Compile
 
