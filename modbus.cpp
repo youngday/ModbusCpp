@@ -85,7 +85,8 @@ void ModBusConnector::connect()
  *  before the program exit since the destructor is not always on program exit
  * \throw: std::system_error if when errors occur, including errors from the
  *         underlying operating system that would prevent lock from meeting its
- *         specifications */
+ *         specifications
+*/
 void ModBusConnector::disconnect()
 {
 	std::lock_guard<std::mutex> lk(modbus_lock); /* acquire lock, lock_guard will auto unlock when out of scope */
@@ -94,6 +95,17 @@ void ModBusConnector::disconnect()
 		modbus_close(this->ctx); /* close the connection to modbus server */
 		this->is_connected = false;
 	}
+}
+
+/** Test if modbus connection is ready
+ * \throw: std::system_error if when errors occur, including errors from the
+ *         underlying operating system that would prevent lock from meeting its
+ *         specifications
+*/
+bool ModBusConnector::is_connect()
+{
+	std::lock_guard<std::mutex> lk(modbus_lock);
+	return this->is_connected;
 }
 
 /** enable modbus verbose message mode
@@ -615,26 +627,30 @@ ModBusServer::ModBusServer(const std::string &ip, const int &port, const int &nb
 // default destructor for Modbus server
 ModBusServer::~ModBusServer()
 {
-	free(event_valid);
-	/* close all remaining active sockets */
-	for (auto &sock : *active_socket_set)
+	if (event_valid)
+		free(event_valid);
+	if (active_socket_set)
 	{
-		/* removing active socket from epoll interest list */
-		if (__glibc_unlikely(epoll_ctl(this->epollfd, EPOLL_CTL_DEL, sock, NULL) == -1))
+		/* close all remaining active sockets */
+		for (auto &sock : *active_socket_set)
 		{
-			/* sanity check */
-			std::cerr << "[ModBusServer::process] removing socket " << sock
-					  << " from epoll interest list fails, "
-					  << strerror(errno) << std::endl;
+			/* removing active socket from epoll interest list */
+			if (__glibc_unlikely(epoll_ctl(this->epollfd, EPOLL_CTL_DEL, sock, NULL) == -1))
+			{
+				/* sanity check */
+				std::cerr << "[ModBusServer::process] removing socket " << sock
+						  << " from epoll interest list fails, "
+						  << strerror(errno) << std::endl;
+			}
+			if (__glibc_unlikely(close(sock) == -1)) /* close all active sockets */
+			{
+				/* sanity check, never happen if code is correct */
+				std::cerr << "[ModBusServer::process] closing socket fails when adding to epoll interest list fails, "
+						  << strerror(errno) << std::endl;
+			}
 		}
-		if (__glibc_unlikely(close(sock) == -1)) /* close all active sockets */
-		{
-			/* sanity check, never happen if code is correct */
-			std::cerr << "[ModBusServer::process] closing socket fails when adding to epoll interest list fails, "
-					  << strerror(errno) << std::endl;
-		}
+		delete active_socket_set;
 	}
-	delete active_socket_set;
 	if (query)
 		free(query);
 	if (events)

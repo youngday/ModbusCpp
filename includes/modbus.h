@@ -20,6 +20,8 @@ private:
 	std::mutex modbus_lock{}; // mutex lock
 
 public:
+	/* No default constructor */
+	ModBusConnector() = delete;
 	/* default constructor for Modbus connector */
 	ModBusConnector(const std::string &ip, const int &port);
 	/* Non-Copyable */
@@ -84,6 +86,9 @@ public:
 	*/
 	void disconnect();
 
+	/* Test if modbus connection is ready */
+	bool is_connect();
+
 	/* enable modbus verbose message mode */
 	void set_debug(bool flag);
 };
@@ -126,6 +131,12 @@ public:
 	/* default constructor for Modbus server */
 	ModBusServer(const std::string &ip, const int &port, const int &nb_coil_status, const int &nb_input_status,
 				 const int &nb_holding_registers, const int &nb_input_registers);
+
+	/* Not copyable or movable*/
+	ModBusServer(const ModBusServer &) = delete;
+	ModBusServer &operator=(const ModBusServer &) = delete;
+	ModBusServer(ModBusServer &&) = delete;
+	ModBusServer &operator=(ModBusServer &&) = delete;
 
 	/* default destructor for Modbus server */
 	~ModBusServer();
