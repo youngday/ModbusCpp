@@ -123,52 +123,41 @@ void ModBusConnector::set_debug(bool flag)
  * \num_of_bits: the number of coil-type modbus objects
  * \values: vector of the fetched value of each coil-type object
  * \return: -1 on failure, or the number of coil-type objects received on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
-int ModBusConnector::read_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values)
+int ModBusConnector::read_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	/* c libmodbus only takes c-style array, temp array to store the data */
-	std::uint8_t *tmp_values = (std::uint8_t *)malloc(num_of_bits * sizeof(std::uint8_t));
-	if (!tmp_values) /* Unable to allocate memory */
-	{
-		std::cerr << "modbus.cpp read_bits: Unable to allocate memory" << std::endl;
-		return -1;
-	}
-	/* init each bit of the tmp array to 0 */
-	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));
-
-	int rc = -1; /* return value */
 	try
 	{
-		ulk.lock();														 /* acquire lock */
-		rc = modbus_read_bits(this->ctx, addr, num_of_bits, tmp_values); /* call libmodbus to do the reading */
-		ulk.unlock();													 /* release the lock */
-	}
-	catch (const std::exception &ex) /* catch the exception from acquiring the lock to give the chance to clean memory */
-	{
-		free(tmp_values); /* in case of exception from lock(), release memory to avoid leaking */
-		throw ex;		  /* re-throw the exception */
-	}
-
-	if (rc == num_of_bits) /* successfully */
-	{
-		values.clear();
-		for (int i = 0; i < num_of_bits; ++i)
+		if (__glibc_unlikely(num_of_bits <= 0))
 		{
-			values.push_back(tmp_values[i]); // copy value to the result vector
+			std::cerr << "ModBusConnector::read_bits: num_of_bits should be greater than 0 " << std::endl;
+			return -1;
 		}
+
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		values.clear();				   /* clear pre-existing content */
+		values.resize(num_of_bits, 0); /* resize to have num_of_bits of elements and filled with 0 */
+
+		ulk.lock();																/* acquire lock */
+		int rc = modbus_read_bits(this->ctx, addr, num_of_bits, values.data()); /* call libmodbus to do the reading */
+		ulk.unlock();															/* release the lock */
+
+		if (rc != num_of_bits) /* reading fails */
+		{
+			values.clear(); /* clear values vector on failure */
+			return -1;
+		}
+		return rc;
 	}
-
-	free(tmp_values); /* free tmp array */
-
-	return rc;
+	catch (const std::exception &e) /* catch the exception from acquiring the lock to give the chance to clean memory */
+	{
+		std::cerr << "ModBusConnector::read_bits: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** receive a number of discrete inputs
@@ -176,53 +165,42 @@ int ModBusConnector::read_bits(const int &addr, const int &num_of_bits, std::vec
  * \num_of_bits: the number of discrete-input-type modbus objects
  * \values: vector of the fetched value of each discrete-input-type object
  * \return: -1 on failure, or the number of discrete-input-type objects received on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
 int ModBusConnector::read_input_bits(const int &addr, const int &num_of_bits,
-									 std::vector<std::uint8_t> &values)
+									 std::vector<std::uint8_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	/* c libmodbus only takes c-style array, temp array to store the data */
-	std::uint8_t *tmp_values = (std::uint8_t *)malloc(num_of_bits * sizeof(std::uint8_t));
-	if (!tmp_values) /* Unable to allocate memory */
-	{
-		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
-		return -1;
-	}
-	/* init each bit of the tmp array to 0 */
-	memset(tmp_values, 0, num_of_bits * sizeof(std::uint8_t));
-
-	int rc = -1; /* return value */
 	try
 	{
-		ulk.lock();															   /* acquire lock */
-		rc = modbus_read_input_bits(this->ctx, addr, num_of_bits, tmp_values); /* call libmodbus to do the reading */
-		ulk.unlock();														   /* release the lock */
-	}
-	catch (const std::exception &ex) /* catch the exception from acquiring the lock to give the chance to clean memory */
-	{
-		free(tmp_values); /* in case of exception from lock(), release memory to avoid leaking */
-		throw ex;		  /* re-throw the exception */
-	}
-
-	if (rc == num_of_bits) /* successfully */
-	{
-		values.clear();
-		for (int i = 0; i < num_of_bits; ++i)
+		if (__glibc_unlikely(num_of_bits <= 0))
 		{
-			values.push_back(tmp_values[i]); // copy value to the result vector
+			std::cerr << "ModBusConnector::read_input_bits: num_of_bits should be greater than 0 " << std::endl;
+			return -1;
 		}
+
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		values.clear();				   /* clear pre-existing content */
+		values.resize(num_of_bits, 0); /* resize to have num_of_bits of elements and filled with 0 */
+
+		ulk.lock();																	  /* acquire lock */
+		int rc = modbus_read_input_bits(this->ctx, addr, num_of_bits, values.data()); /* call libmodbus to do the reading */
+		ulk.unlock();																  /* release the lock */
+
+		if (rc != num_of_bits) /* reading fails */
+		{
+			values.clear(); /* clear values vector on failure */
+			return -1;
+		}
+		return rc;
 	}
-
-	free(tmp_values); /* free tmp array */
-
-	return rc;
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::read_input_bits: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** receive a serial of holding registers
@@ -230,52 +208,41 @@ int ModBusConnector::read_input_bits(const int &addr, const int &num_of_bits,
  * \num_of_bits: the number of holding registers
  * \values: vector of the fetched value of each holding register
  * \return: -1 on failure, or the number of holding registers received on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
-int ModBusConnector::read_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values)
+int ModBusConnector::read_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	/* c libmodbus only takes c-style array, temp array to store the data */
-	std::uint16_t *tmp_values = (std::uint16_t *)malloc(num_of_registers * sizeof(std::uint16_t));
-	if (!tmp_values)
-	{
-		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
-		return -1;
-	}
-	/* init each bit of the tmp array to 0 */
-	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));
-
-	int rc = -1; /* return value */
 	try
 	{
-		ulk.lock();																   /* acquire lock */
-		rc = modbus_read_registers(this->ctx, addr, num_of_registers, tmp_values); /* call libmodbus to do the reading */
-		ulk.unlock();															   /* release the lock */
-	}
-	catch (const std::exception &ex) /* catch the exception from acquiring the lock to give the chance to clean memory */
-	{
-		free(tmp_values); /* in case of exception from lock(), release memory to avoid leaking */
-		throw ex;		  /* re-throw the exception */
-	}
-
-	if (rc == num_of_registers) /* successfully */
-	{
-		values.clear();
-		for (int i = 0; i < num_of_registers; ++i)
+		if (__glibc_unlikely(num_of_registers <= 0))
 		{
-			values.push_back(tmp_values[i]); // copy value to the result vector
+			std::cerr << "ModBusConnector::read_registers: num_of_registers should be greater than 0 " << std::endl;
+			return -1;
 		}
+
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		values.clear();						/* clear pre-existing content */
+		values.resize(num_of_registers, 0); /* resize to have num_of_registers of elements and filled with 0 */
+
+		ulk.lock();																		  /* acquire lock */
+		int rc = modbus_read_registers(this->ctx, addr, num_of_registers, values.data()); /* call libmodbus to do the reading */
+		ulk.unlock();																	  /* release the lock */
+
+		if (rc != num_of_registers) /* reading fails */
+		{
+			values.clear(); /* clear values vector on failure */
+			return -1;
+		}
+		return rc;
 	}
-
-	free(tmp_values); /* free tmp array */
-
-	return rc;
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::read_registers: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** receive a serial of input registers
@@ -283,70 +250,64 @@ int ModBusConnector::read_registers(const int &addr, const int &num_of_registers
  * \num_of_bits: the number of input registers
  * \values: vector of the fetched value of each input register
  * \return: -1 on failure, or the number of input registers received on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
-int ModBusConnector::read_input_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values)
+int ModBusConnector::read_input_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	/* c libmodbus only takes c-style array, temp array to store the data */
-	std::uint16_t *tmp_values = (std::uint16_t *)malloc(num_of_registers * sizeof(std::uint16_t));
-	if (!tmp_values)
-	{
-		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
-		return -1;
-	}
-	/* init each bit of the tmp array to 0 */
-	memset(tmp_values, 0, num_of_registers * sizeof(std::uint16_t));
-
-	int rc = -1; /* return value */
 	try
 	{
-		ulk.lock();																		 /* return value */
-		rc = modbus_read_input_registers(this->ctx, addr, num_of_registers, tmp_values); /* call libmodbus to do the reading */
-		ulk.unlock();																	 /* release the lock */
-	}
-	catch (const std::exception &ex) /* catch the exception from acquiring the lock to give the chance to clean memory */
-	{
-		free(tmp_values); /* in case of exception from lock(), release memory to avoid leaking */
-		throw ex;		  /* re-throw the exception */
-	}
-
-	if (rc == num_of_registers) /* successfully */
-	{
-		values.clear();
-		for (int i = 0; i < num_of_registers; ++i)
+		if (__glibc_unlikely(num_of_registers <= 0))
 		{
-			values.push_back(tmp_values[i]); // copy value to the result vector
+			std::cerr << "ModBusConnector::read_input_registers: num_of_bits should be greater than 0 " << std::endl;
+			return -1;
 		}
+
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		values.clear();						/* clear pre-existing content */
+		values.resize(num_of_registers, 0); /* resize to have num_of_registers of elements and filled with 0 */
+
+		ulk.lock();																				/* return value */
+		int rc = modbus_read_input_registers(this->ctx, addr, num_of_registers, values.data()); /* call libmodbus to do the reading */
+		ulk.unlock();																			/* release the lock */
+
+		if (rc != num_of_registers) /* reading fails */
+		{
+			values.clear(); /* clear values vector on failure */
+			return -1;
+		}
+		return rc;
 	}
-
-	free(tmp_values); /* free tmp array */
-
-	return rc;
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::read_input_registers: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** send value into a single coil
  * \addr: the address of coil modbus object
  * \value: the value to send, either 1 or 0
  * \return: -1 on failure, or 1 on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
-int ModBusConnector::write_bit(const int &addr, const std::uint8_t &value)
+int ModBusConnector::write_bit(const int &addr, const std::uint8_t &value) noexcept
 {
-	std::lock_guard<std::mutex> lk(modbus_lock); /* acquire lock, lock_guard will auto unlock when out of scope */
-	if (!this->is_connected)					 /* return failure if connection not yet established */
-		return -1;
+	try
+	{
+		std::lock_guard<std::mutex> lk(modbus_lock); /* acquire lock, lock_guard will auto unlock when out of scope */
+		if (!this->is_connected)					 /* return failure if connection not yet established */
+			return -1;
 
-	int rc = modbus_write_bit(this->ctx, addr, value); /* call libmodbus to do the writing */
-	return rc;
+		int rc = modbus_write_bit(this->ctx, addr, value); /* call libmodbus to do the writing */
+		return rc;
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::write_bit: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** send values into a serial of coils
@@ -354,47 +315,69 @@ int ModBusConnector::write_bit(const int &addr, const std::uint8_t &value)
  * \num_of_bits: the number of coil-type modbus objects to be sent
  * \values: the vector of values to send, each value should be either 1 or 0
  * \return: -1 on failure, or the number of coil-type objects sent on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
 int ModBusConnector::write_bits(const int &addr, const int &num_of_bits,
-								const std::vector<std::uint8_t> &values)
+								const std::vector<std::uint8_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	int num_to_write = values.size(); /* get the size of values vector */
-
-	/* if num_of_bits is larger than the actual vector size, overwrite it with vector size 
-	   so that the Min<num_of_bits, size> values will be sent */
-	if (num_to_write > num_of_bits)
+	try
 	{
-		num_to_write = num_of_bits;
-	}
+		if (__glibc_unlikely(num_of_bits <= 0))
+		{
+			std::cerr << "ModBusConnector::write_bits: num_of_bits should be greater than 0 " << std::endl;
+			return -1;
+		}
 
-	ulk.lock();																/* acquire lock */
-	return modbus_write_bits(this->ctx, addr, num_to_write, values.data()); /* call libmodbus to do the writing */
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		int num_to_write = values.size(); /* get the size of values vector */
+
+		/* if num_of_bits is larger than the actual vector size, overwrite it with vector size 
+	       so that the Min<num_of_bits, size> values will be sent */
+		if (num_to_write > num_of_bits)
+		{
+			num_to_write = num_of_bits;
+		}
+
+		ulk.lock();																  /* acquire lock */
+		int rc = modbus_write_bits(this->ctx, addr, num_to_write, values.data()); /* call libmodbus to do the writing */
+		ulk.unlock();															  /* release lock when it's not required */
+
+		if (rc != num_of_bits) /* writing fails */
+			return -1;
+
+		return rc;
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::write_bits: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** send value into a single holding register
  * \addr: the address of holding register
  * \value: the value to send
  * \return: -1 on failure, or 1 on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications 
 */
-int ModBusConnector::write_register(const int &addr, const std::uint16_t &value)
+int ModBusConnector::write_register(const int &addr, const std::uint16_t &value) noexcept
 {
-	std::lock_guard<std::mutex> lk(modbus_lock); /* acquire lock, lock_guard will auto unlock when out of scope */
-	if (!this->is_connected)					 /* return failure if connection not yet established */
-		return -1;
+	try
+	{
+		std::lock_guard<std::mutex> lk(modbus_lock); /* acquire lock, lock_guard will auto unlock when out of scope */
+		if (!this->is_connected)					 /* return failure if connection not yet established */
+			return -1;
 
-	int rc = modbus_write_register(this->ctx, addr, value); /* call libmodbus to do the writing */
-	return rc;
+		int rc = modbus_write_register(this->ctx, addr, value); /* call libmodbus to do the writing */
+		return rc;
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::write_register: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** send values into a number of holding registers
@@ -402,29 +385,46 @@ int ModBusConnector::write_register(const int &addr, const std::uint16_t &value)
  * \num_of_bits: the number of holding registers to be sent
  * \values: the vector of values to send
  * \return: -1 on failure, or the number of holding registers sent on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
 int ModBusConnector::write_registers(const int &addr, const int &num_of_registers,
-									 const std::vector<std::uint16_t> &values)
+									 const std::vector<std::uint16_t> &values) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	int num_to_write = values.size(); /* get the size of values vector */
-
-	/* if num_of_registers is larger than the actual vector size, overwrite it with vector size 
-	   so that the Min<num_of_registers, size> values will be sent */
-	if (num_to_write > num_of_registers)
+	try
 	{
-		num_to_write = num_of_registers;
-	}
+		if (__glibc_unlikely(num_of_registers <= 0))
+		{
+			std::cerr << "ModBusConnector::write_registers: num_of_registers should be greater than 0 " << std::endl;
+			return -1;
+		}
 
-	ulk.lock();																	 /* acquire lock */
-	return modbus_write_registers(this->ctx, addr, num_to_write, values.data()); /* call libmodbus to do the writing */
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		int num_to_write = values.size(); /* get the size of values vector */
+
+		/* if num_of_registers is larger than the actual vector size, overwrite it with vector size 
+	       so that the Min<num_of_registers, size> values will be sent */
+		if (num_to_write > num_of_registers)
+		{
+			num_to_write = num_of_registers;
+		}
+
+		ulk.lock();																	   /* acquire lock */
+		int rc = modbus_write_registers(this->ctx, addr, num_to_write, values.data()); /* call libmodbus to do the writing */
+		ulk.unlock();
+
+		if (rc != num_of_registers)
+			return -1;
+
+		return rc;
+	}
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::write_registers: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** send values into a serial of holding registers and then read values back from those registers
@@ -434,63 +434,57 @@ int ModBusConnector::write_registers(const int &addr, const int &num_of_register
  * \num_registers_to_read: the number of holding registers to receive values from
  * \values_to_read: the vector to hold the received values
  * \return: -1 on failure, or the number of holding registers received on success
- * \throw: std::system_error if when errors occur, including errors from the
- *         underlying operating system that would prevent lock from meeting its
- *         specifications
 */
 int ModBusConnector::write_and_read_registers(const int &write_addr, const int &num_of_registers_to_write,
 											  const std::vector<std::uint16_t> &values_to_write,
 											  const int &read_addr, const int &num_registers_to_read,
-											  std::vector<std::uint16_t> &values_to_read)
+											  std::vector<std::uint16_t> &values_to_read) noexcept
 {
-	std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
-	if (!this->is_connected)					   /* return failure if connection not yet established */
-		return -1;
-	ulk.unlock(); /* release lock when it's not required */
-
-	int num_to_write = values_to_write.size(); /* get the size of values vector */
-
-	/* if num_of_registers is larger than the actual vector size, overwrite it with vector size 
-	   so that the Min<num_of_registers, size> values will be sent */
-	if (num_to_write > num_of_registers_to_write)
-	{
-		num_to_write = num_of_registers_to_write;
-	}
-	/* c libmodbus only takes c-style array, temp array to store the received data */
-	std::uint16_t *tmp_values_to_read = (std::uint16_t *)malloc(num_registers_to_read * sizeof(std::uint16_t));
-	if (!tmp_values_to_read)
-	{
-		std::cerr << "modbus.cpp: Unable to allocate memory" << std::endl;
-		return -1;
-	}
-	memset(tmp_values_to_read, 0, num_registers_to_read * sizeof(std::uint16_t));
-
-	int rc = -1; /* return value */
 	try
 	{
+		if (__glibc_unlikely(num_of_registers_to_write <= 0 || num_registers_to_read <= 0))
+		{
+			std::cerr << "ModBusConnector::write_and_read_registers: num_of_registers_to_write and num_registers_to_read should be greater than 0 " << std::endl;
+			return -1;
+		}
+
+		std::unique_lock<std::mutex> ulk(modbus_lock); /* acquire lock, unique_lock will auto unlock when out of scope */
+		if (!this->is_connected)					   /* return failure if connection not yet established */
+			return -1;
+		ulk.unlock(); /* release lock when it's not required */
+
+		int num_to_write = values_to_write.size(); /* get the size of values vector */
+
+		/* if num_of_registers is larger than the actual vector size, overwrite it with vector size 
+	       so that the Min<num_of_registers, size> values will be sent */
+		if (num_to_write > num_of_registers_to_write)
+		{
+			num_to_write = num_of_registers_to_write;
+		}
+
+		values_to_read.clear();  /* clear pre-existing content */
+		values_to_read.resize(num_registers_to_read, 0); /* resize to have num_registers_to_read of elements and filled with 0 */
+
+		int rc = -1; /* return value */
+
 		ulk.lock(); /* acquire lock */
 		/* call libmodbus to do the jobs */
 		rc = modbus_write_and_read_registers(this->ctx, write_addr, num_to_write, values_to_write.data(),
-											 read_addr, num_registers_to_read, tmp_values_to_read);
+											 read_addr, num_registers_to_read, values_to_read.data());
 		ulk.unlock(); /* release the lock */
-	}
-	catch (std::exception &ex)
-	{
-		free(tmp_values_to_read); /* in case of exception from lock(), release memory to avoid leaking */
-		throw ex;				  /* re-throw the exception */
-	}
 
-	if (rc == num_registers_to_read) /* read successfully */
-	{
-		values_to_read.clear();
-		for (int i = 0; i < num_registers_to_read; ++i)
+		if (rc != num_registers_to_read) /* writing or reading fails */
 		{
-			values_to_read.push_back(tmp_values_to_read[i]); // copy value to the result vector
+			values_to_read.clear(); /* clear values_to_read vector on failure */
+			return -1;
 		}
+		return rc;
 	}
-
-	free(tmp_values_to_read); /* free tmp array */
-	return rc;
+	catch (const std::exception &e)
+	{
+		std::cerr << "ModBusConnector::write_and_read_registers: " << e.what() << std::endl;
+		return -1;
+	}
 }
 
 /** convert a float type value to two holding registers
@@ -500,7 +494,7 @@ int ModBusConnector::write_and_read_registers(const int &write_addr, const int &
 */
 void ModBusConnector::set_float(const float &f, std::uint16_t &register0, std::uint16_t &register1) noexcept
 {
-	std::uint16_t tmp_values[2] = {0};
+	std::uint16_t tmp_values[2]{0};
 	modbus_set_float(f, tmp_values); //libmodbus
 	register0 = tmp_values[0];
 	register1 = tmp_values[1];

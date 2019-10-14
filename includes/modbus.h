@@ -35,34 +35,34 @@ public:
 	~ModBusConnector() noexcept;
 
 	/* read a number of coils */
-	int read_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values);
+	int read_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values) noexcept;
 
 	/* read a number of discrete inputs */
-	int read_input_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values);
+	int read_input_bits(const int &addr, const int &num_of_bits, std::vector<std::uint8_t> &values) noexcept;
 
 	/* read a number of holding registers */
-	int read_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values);
+	int read_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values) noexcept;
 
 	/* read a number of input registers */
-	int read_input_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values);
+	int read_input_registers(const int &addr, const int &num_of_registers, std::vector<std::uint16_t> &values) noexcept;
 
 	/* write value into a single coil */
-	int write_bit(const int &addr, const std::uint8_t &value);
+	int write_bit(const int &addr, const std::uint8_t &value) noexcept;
 
 	/* write values into a number of coils */
-	int write_bits(const int &addr, const int &num_of_bits, const std::vector<std::uint8_t> &values);
+	int write_bits(const int &addr, const int &num_of_bits, const std::vector<std::uint8_t> &values) noexcept;
 
 	/* write value into a single holding register */
-	int write_register(const int &addr, const std::uint16_t &value);
+	int write_register(const int &addr, const std::uint16_t &value) noexcept;
 
 	/* write values into a number of holding registers */
-	int write_registers(const int &addr, const int &num_of_registers, const std::vector<std::uint16_t> &values);
+	int write_registers(const int &addr, const int &num_of_registers, const std::vector<std::uint16_t> &values) noexcept;
 
 	/* write values into a number of holding registers and then read values back from those registers */
 	int write_and_read_registers(const int &write_addr, const int &num_of_registers_to_write,
 								 const std::vector<std::uint16_t> &values_to_write,
 								 const int &read_addr, const int &num_registers_to_read,
-								 std::vector<std::uint16_t> &values_to_read);
+								 std::vector<std::uint16_t> &values_to_read) noexcept;
 
 	/* convert a float type value to two holding registers */
 	static void set_float(const float &f, std::uint16_t &register0, std::uint16_t &register1) noexcept;
