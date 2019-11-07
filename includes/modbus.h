@@ -15,9 +15,9 @@
 class ModBusConnector
 {
 private:
-	modbus_t *ctx;			  // libmodbus context
-	bool is_connected;		  // connection state;
-	std::mutex modbus_lock{}; // mutex lock
+	modbus_t *ctx;			   // libmodbus context
+	bool is_connected = false; // connection state;
+	std::mutex modbus_lock{};  // mutex lock
 
 public:
 	/* No default constructor */

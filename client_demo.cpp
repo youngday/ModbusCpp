@@ -23,7 +23,7 @@ void oper_read_write(ModBusConnector &conn, std::stringstream &ss, const bool is
 
 int main()
 {
-	static std::unordered_map<std::string, std::pair<std::string, std::vector<int>>> data_map;
+	std::unordered_map<std::string, std::pair<std::string, std::vector<int>>> data_map;
 	//variable modbus mapping
 
 	std::string ip;
@@ -36,7 +36,7 @@ int main()
 	std::cout << "ip: " << ip << " port: " << port << std::endl
 			  << std::endl;
 
-	static ModBusConnector conn(ip, port); //create modbus connection instance
+	ModBusConnector conn(ip, port); //create modbus connection instance
 
 	try
 	{
@@ -143,7 +143,7 @@ int main()
 		}
 	}
 
-	std::exit(EXIT_SUCCESS);
+	return 0;
 }
 
 //display available command
@@ -164,10 +164,6 @@ void displayhelp()
 			  << "write random numbers into VAR_NAME and read the values" << std::endl;
 	std::cout << std::left << std::setw(30) << "rr VAR_NAME" << std::right
 			  << "read real value of VAR_NAME" << std::endl;
-	std::cout << std::left << std::setw(30) << "wr VAR_NAME" << std::right
-			  << "write random real numbers into VAR_NAME" << std::endl;
-	std::cout << std::left << std::setw(30) << "rwr VAR_NAME" << std::right
-			  << "write random real numbers into VAR_NAME and read the values" << std::endl;
 	std::cout << std::left << std::setw(30) << "wr VAR_NAME REAL_VALUE" << std::right
 			  << "write the real number REAL_VALUE into VAR_NAME" << std::endl;
 	std::cout << std::left << std::setw(30) << "rwr VAR_NAME REAL_VALUE" << std::right
@@ -221,20 +217,23 @@ void oper_write(ModBusConnector &conn, std::stringstream &ss, const bool is_floa
 		{
 			int custom_value_counter = value_set.size();
 			if (!custom_value_counter)
-				std::cout << "Writing random numbers into the selected holding registers..." << std::endl;
+			{
+				std::cerr << "Invalid operation argument: wr VAR_NAME REAL_VALUE" << std::endl;
+				return;
+			}
 			std::vector<uint16_t> tab_rq_registers(num, 0); //registers vector
 			if (is_float)									//"write_real"
 			{
 				// if no custom value, send random number to modbus server instead
 				// otherwise, send the custom value
 				// and the number of input value should not overflow the modbus variable
-				int counter = (!custom_value_counter || 2 * custom_value_counter > num) ? num : 2 * custom_value_counter;
-				for (int i = 0; i < counter - 1; i += 2) //one real number will take 2 registers
+				int counter = (2 * custom_value_counter > num) ? num : 2 * custom_value_counter;
+				for (int i = 0; i < counter - 1; i += 2) // one real number will take 2 registers
 				{
-					float value = (custom_value_counter) ? value_set[2 * i]										   //custom real number
-														 : (float)((double)rand() / ((double)RAND_MAX / 65535.0)); //random real number
+					float value = value_set[2 * i]; // custom real numbers
+
 					ModBusConnector::set_float(value, tab_rq_registers[i], tab_rq_registers[i + 1]);
-					//convert real value to two registers
+					// convert real value to two registers
 					std::cout << std::setprecision(7) << value << "\t";
 				}
 			}
@@ -445,7 +444,10 @@ void oper_read_write(ModBusConnector &conn, std::stringstream &ss, const bool is
 		}
 		int custom_value_counter = value_set.size();
 		if (!custom_value_counter)
-			std::cout << "Writing random numbers into and reading the selected holding registers..." << std::endl;
+		{
+			std::cerr << "Invalid operation argument: wr VAR_NAME REAL_VALUE" << std::endl;
+			return;
+		}
 		std::vector<uint16_t> tab_rw_rq_registers(num, 0); //registers to be write
 		std::vector<uint16_t> tab_rp_registers(num, 0);	//registers to be read
 
@@ -454,11 +456,10 @@ void oper_read_write(ModBusConnector &conn, std::stringstream &ss, const bool is
 			// if no custom value, send random number to modbus server instead
 			// otherwise, send the custom value
 			// and the number of input value should not overflow the modbus variable
-			int counter = (!custom_value_counter || 2 * custom_value_counter > num) ? num : 2 * custom_value_counter;
+			int counter = (2 * custom_value_counter > num) ? num : 2 * custom_value_counter;
 			for (int i = 0; i < counter - 1; i += 2)
 			{
-				float value = (custom_value_counter) ? value_set[2 * i]										   //custom real number
-													 : (float)((double)rand() / ((double)RAND_MAX / 65535.0)); //random real number
+				float value = value_set[2 * i]; // custom real number
 				ModBusConnector::set_float(value, tab_rw_rq_registers[i], tab_rw_rq_registers[i + 1]);
 				std::cout << std::setprecision(7) << value << "\t";
 			}
@@ -467,7 +468,7 @@ void oper_read_write(ModBusConnector &conn, std::stringstream &ss, const bool is
 		{
 			for (int i = 0; i < num; i++)
 			{
-				tab_rw_rq_registers[i] = ~((uint16_t)(65535.0 * rand() / (RAND_MAX + 1.0))); //random int number
+				tab_rw_rq_registers[i] = ~((uint16_t)(65535.0 * rand() / (RAND_MAX + 1.0))); // random int number
 				std::cout << (int16_t)tab_rw_rq_registers[i] << "\t";
 			}
 		}

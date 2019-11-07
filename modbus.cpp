@@ -462,7 +462,7 @@ int ModBusConnector::write_and_read_registers(const int &write_addr, const int &
 			num_to_write = num_of_registers_to_write;
 		}
 
-		values_to_read.clear();  /* clear pre-existing content */
+		values_to_read.clear();							 /* clear pre-existing content */
 		values_to_read.resize(num_registers_to_read, 0); /* resize to have num_registers_to_read of elements and filled with 0 */
 
 		int rc = -1; /* return value */
@@ -621,8 +621,7 @@ ModBusServer::ModBusServer(const std::string &ip, const int &port, const int &nb
 // default destructor for Modbus server
 ModBusServer::~ModBusServer()
 {
-	if (event_valid)
-		free(event_valid);
+	free(event_valid);
 	if (active_socket_set)
 	{
 		/* close all remaining active sockets */
@@ -645,10 +644,8 @@ ModBusServer::~ModBusServer()
 		}
 		delete active_socket_set;
 	}
-	if (query)
-		free(query);
-	if (events)
-		free(events);
+	free(query);
+	free(events);
 	if (server_socket != -1)
 		close(server_socket); /* close main server socket */
 	if (epollfd != -1)

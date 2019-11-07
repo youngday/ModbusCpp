@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS= -O3 -Wall -Werror -Wextra -pedantic -std=c++11 -g #-fsanitize=address
+CFLAGS= -O3 -flto=4 -Wall -Werror -Wextra -pedantic -std=c++11 -g #-fsanitize=address
 LIBS = -lmodbus
 SRCS = client_demo.cpp server_m.cpp parser.cpp
 CLIOBJS = client_demo.o modbus.o parser.o
